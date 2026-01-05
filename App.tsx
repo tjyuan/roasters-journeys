@@ -14,6 +14,18 @@ import { v4 as uuidv4 } from 'uuid';
  * These will be populated by your build tool (e.g. GitHub Actions) 
  * using environment variables. If blank, the user can still enter them manually.
  */
+ 
+ const getEnv = (key: string): string => {
+  try {
+    // Vite replaces process.env.KEY with a string during build
+    // @ts-ignore
+    const value = process.env[key];
+    return value || '';
+  } catch (e) {
+    return '';
+  }
+};
+
 const DEFAULT_CLOUD_CONFIG: CloudConfig = {
   // @ts-ignore - process.env might not be defined in all dev environments
   enabled: !!(process.env.SUPABASE_URL || ''),
