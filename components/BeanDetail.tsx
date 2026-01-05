@@ -171,7 +171,7 @@ const BeanDetail: React.FC<BeanDetailProps> = ({ currentUser, beans, onUpdateBea
   const getMetricDisplay = (data: RoastingData, key: keyof typeof MILESTONE_LABELS) => {
     let prevTemp = data.chargeTemperature;
     if (key === 'yellowingPoint') prevTemp = data.turningWhite.temperature;
-    if (key === 'firstCrack') prevTemp = data.turningWhite.temperature;
+    if (key === 'firstCrack') prevTemp = data.yellowingPoint.temperature;
     if (key === 'dropBean') prevTemp = data.firstCrack.temperature;
     const { ror, sd } = calculateMetrics((data as any)[key].temperature, prevTemp, (data as any)[key].time);
     return { ror: ror !== null ? ror.toFixed(2) : '—', sd: sd !== null ? sd.toFixed(2) : '—' };
