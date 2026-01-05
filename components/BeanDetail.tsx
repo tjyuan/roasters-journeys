@@ -44,18 +44,8 @@ const secondsToTime = (seconds: number): string => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
-const calculateMetrics = (currTemp: string, prevTemp: string, intervalTimeStr: string) => {
-  const ct = parseFloat(currTemp);
-  const pt = parseFloat(prevTemp);
-  const secs = timeToSeconds(intervalTimeStr);
-  const mins = secs / 60;
-  if (isNaN(ct) || isNaN(pt) || mins <= 0) return { ror: null, sd: null };
-  const ror = (ct - pt) / mins;
-  const sd = ror !== null && ror !== 0 ? 60 / ror : null;
-  return { ror, sd };
-};
-
 const calculateTotalDuration = (data: RoastingData): string => {
+  // Requirement: Total roast time is calculated by adding the time intervals
   const sum = 
     timeToSeconds(data.turningWhite.time) +
     timeToSeconds(data.yellowingPoint.time) +
@@ -87,21 +77,6 @@ const BeanDetail: React.FC<BeanDetailProps> = ({ currentUser, beans, onUpdateBea
   const tSym = `°${currentUser.tempUnit}`;
 
   if (!bean) return <div className="p-20 text-center"><p className="serif text-3xl italic text-stone-300">Identity could not be verified in archives.</p></div>;
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, target: 'bean' | 'batch') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      if (target === 'bean') {
-        setBeanForm(prev => prev ? ({ ...prev, imageUrl: result }) : null);
-      } else {
-        setBatchForm(prev => ({ ...prev, imageUrl: result }));
-      }
-    };
-    reader.readAsDataURL(file);
-  };
 
   const handlePrint = () => window.print();
 
@@ -169,12 +144,45 @@ const BeanDetail: React.FC<BeanDetailProps> = ({ currentUser, beans, onUpdateBea
   };
 
   const getMetricDisplay = (data: RoastingData, key: keyof typeof MILESTONE_LABELS) => {
-    let prevTemp = data.chargeTemperature;
-    if (key === 'yellowingPoint') prevTemp = data.turningWhite.temperature;
-    if (key === 'firstCrack') prevTemp = data.yellowingPoint.temperature;
-    if (key === 'dropBean') prevTemp = data.firstCrack.temperature;
-    const { ror, sd } = calculateMetrics((data as any)[key].temperature, prevTemp, (data as any)[key].time);
-    return { ror: ror !== null ? ror.toFixed(2) : '—', sd: sd !== null ? sd.toFixed(2) : '—' };
+    const chargeTemp = parseFloat(data.chargeTemperature);
+    const twTemp = parseFloat(data.turningWhite.temperature);
+    const ypTemp = parseFloat(data.yellowingPoint.temperature);
+    const fcTemp = parseFloat(data.firstCrack.temperature);
+    const dbTemp = parseFloat(data.dropBean.temperature);
+
+    const twTime = timeToSeconds(data.turningWhite.time) / 60;
+    const ypTime = timeToSeconds(data.yellowingPoint.time) / 60;
+    const fcTime = timeToSeconds(data.firstCrack.time) / 60;
+    const dbTime = timeToSeconds(data.dropBean.time) / 60;
+
+    let ror: number | null = null;
+
+    // Strict implementation of requested formulas
+    if (key === 'turningWhite') {
+      if (!isNaN(twTemp) && !isNaN(chargeTemp) && twTime > 0) {
+        ror = (twTemp - chargeTemp) / twTime;
+      }
+    } else if (key === 'yellowingPoint') {
+      if (!isNaN(ypTemp) && !isNaN(twTemp) && ypTime > 0) {
+        ror = (ypTemp - twTemp) / ypTime;
+      }
+    } else if (key === 'firstCrack') {
+      // Corrected Formula: (First crack temp – Yellowing point temp)/First crack time
+      if (!isNaN(fcTemp) && !isNaN(ypTemp) && fcTime > 0) {
+        ror = (fcTemp - ypTemp) / fcTime;
+      }
+    } else if (key === 'dropBean') {
+      // Formula: (Drop bean temp – First crack Temp)/Drop bean time
+      if (!isNaN(dbTemp) && !isNaN(fcTemp) && dbTime > 0) {
+        ror = (dbTemp - fcTemp) / dbTime;
+      }
+    }
+
+    const sd = (ror !== null && ror !== 0) ? 60 / ror : null;
+    return { 
+      ror: ror !== null ? ror.toFixed(2) : '—', 
+      sd: sd !== null ? sd.toFixed(2) : '—' 
+    };
   };
 
   return (
@@ -365,7 +373,7 @@ const BeanDetail: React.FC<BeanDetailProps> = ({ currentUser, beans, onUpdateBea
                             }} className="w-full bg-transparent border-b border-stone-200 py-2 serif text-xl outline-none focus:border-stone-900" />
                           </div>
                           <div>
-                            <label className="block text-[9px] uppercase tracking-widest text-stone-300 font-bold mb-2">Time (MM:SS)</label>
+                            <label className="block text-[9px] uppercase tracking-widest text-stone-300 font-bold mb-2">Duration (MM:SS)</label>
                             <input type="text" placeholder="00:00" value={(batchForm[activeTab] as any)[key].time} onChange={e => {
                               const newData = {...(batchForm[activeTab] as any)};
                               newData[key].time = e.target.value;

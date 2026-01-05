@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
 import { GreenBean } from '../types';
-import { Search, LogIn, Coffee, UserPlus } from 'lucide-react';
+import { Search, LogIn, Coffee, UserPlus, Loader2 } from 'lucide-react';
 
 interface LandingProps {
-  onLogin: (username: string, password?: string) => boolean;
-  onSignup: (username: string, password?: string) => boolean;
+  onLogin: (username: string, password?: string) => Promise<boolean>;
+  onSignup: (username: string, password?: string) => Promise<boolean>;
   beans: GreenBean[];
 }
 
@@ -15,19 +15,29 @@ const Landing: React.FC<LandingProps> = ({ onLogin, onSignup, beans }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const publicBeans = beans.filter(b => b.isPublic && 
     (b.beanName.toLowerCase().includes(search.toLowerCase()) || 
      b.country.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (modalMode === 'login') {
-      if (!onLogin(username, password)) setError('Sign-in failed. Check credentials.');
-    } else {
-      if (!onSignup(username, password)) setError('User already exists.');
+    setIsVerifying(true);
+    try {
+      if (modalMode === 'login') {
+        const success = await onLogin(username, password);
+        if (!success) setError('Identity could not be verified in local or cloud archives.');
+      } else {
+        const success = await onSignup(username, password);
+        if (!success) setError('Designation already claimed in local registry.');
+      }
+    } catch (err) {
+      setError('Bridge failure. Check your connection.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -68,7 +78,6 @@ const Landing: React.FC<LandingProps> = ({ onLogin, onSignup, beans }) => {
               placeholder="Query Global Repository..."
               className="w-full pl-10 pr-4 py-4 bg-transparent border-b border-stone-300 focus:border-stone-900 outline-none transition-colors serif italic text-xl"
               value={search}
-              // Fixed: changed setSearchTerm to setSearch to match state definition
               onChange={(e) => setSearch(e.target.value)}
             />
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-stone-400" size={24} />
@@ -112,10 +121,11 @@ const Landing: React.FC<LandingProps> = ({ onLogin, onSignup, beans }) => {
                 <input 
                   autoFocus
                   required
+                  disabled={isVerifying}
                   type="text" 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-transparent border-b border-stone-300 focus:border-stone-900 py-3 outline-none serif text-xl"
+                  className="w-full bg-transparent border-b border-stone-300 focus:border-stone-900 py-3 outline-none serif text-xl disabled:opacity-50"
                   placeholder="User"
                 />
               </div>
@@ -123,24 +133,33 @@ const Landing: React.FC<LandingProps> = ({ onLogin, onSignup, beans }) => {
                 <label className="block text-[10px] uppercase tracking-[0.3em] text-stone-400 font-bold mb-3">Password</label>
                 <input 
                   required
+                  disabled={isVerifying}
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent border-b border-stone-300 focus:border-stone-900 py-3 outline-none serif text-xl"
+                  className="w-full bg-transparent border-b border-stone-300 focus:border-stone-900 py-3 outline-none serif text-xl disabled:opacity-50"
                   placeholder="Password"
                 />
               </div>
-              {error && <p className="text-red-500 text-xs serif italic text-center">{error}</p>}
+              {error && <p className="text-red-500 text-xs serif italic text-center px-4 py-2 bg-red-50 border border-red-100 rounded-sm">{error}</p>}
               <button 
                 type="submit"
-                className="w-full py-5 bg-stone-900 text-white uppercase tracking-[0.4em] text-xs font-semibold hover:bg-stone-800 transition-all shadow-lg"
+                disabled={isVerifying}
+                className="w-full py-5 bg-stone-900 text-white uppercase tracking-[0.4em] text-xs font-semibold hover:bg-stone-800 transition-all shadow-lg flex items-center justify-center gap-3 disabled:bg-stone-400"
               >
-                {modalMode === 'login' ? 'Sign-in' : 'Sign-up'}
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="animate-spin" size={16} /> Verifying...
+                  </>
+                ) : (
+                  modalMode === 'login' ? 'Sign-in' : 'Sign-up'
+                )}
               </button>
               <button 
                 type="button"
+                disabled={isVerifying}
                 onClick={() => setModalMode(null)}
-                className="w-full text-[10px] uppercase tracking-widest text-stone-400 hover:text-stone-600 font-bold"
+                className="w-full text-[10px] uppercase tracking-widest text-stone-400 hover:text-stone-600 font-bold disabled:opacity-0 transition-opacity"
               >
                 Cancel
               </button>
