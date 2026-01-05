@@ -43,7 +43,7 @@ const Docs: React.FC = () => {
                 Since your GitHub code is public, you should never type your Supabase keys directly into the files. Instead:
               </p>
               <ul className="space-y-3 text-sm text-stone-500 serif list-disc list-inside">
-                <li>Go to your GitHub Repo -> Settings -> Secrets -> Actions.</li>
+                <li>Go to your GitHub Repo -&gt Settings -&gt Secrets -&gt Actions.</li>
                 <li>Add <strong>SUPABASE_URL</strong> and <strong>SUPABASE_KEY</strong>.</li>
                 <li>GitHub will safely "inject" these into the app during the build process.</li>
               </ul>
@@ -67,7 +67,7 @@ const Docs: React.FC = () => {
             <div className="p-6 bg-amber-50 border border-amber-100 rounded-sm">
               <h4 className="text-[10px] uppercase tracking-widest font-black text-amber-800 mb-2">Final Step: Activation</h4>
               <p className="text-xs text-amber-700 leading-relaxed italic">
-                After you push your code, go to <strong>Settings > Pages</strong> in GitHub. Under "Build and deployment", ensure the source is set to <strong>"GitHub Actions"</strong>. Your site will be live in about 2 minutes.
+                After you push your code, go to <strong>Settings &gt Pages</strong> in GitHub. Under "Build and deployment", ensure the source is set to <strong>"GitHub Actions"</strong>. Your site will be live in about 2 minutes.
               </p>
             </div>
           </div>
