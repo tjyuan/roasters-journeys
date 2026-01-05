@@ -1,0 +1,16 @@
+{
+  "short_name": "Journeys",
+  "name": "Roaster's Journeys",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/924/924514.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#fdfaf5",
+  "background_color": "#fdfaf5"
+}

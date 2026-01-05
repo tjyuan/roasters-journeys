@@ -1,0 +1,5 @@
+{
+  "name": "Roaster's Journeys",
+  "description": "A sophisticated repository for coffee roasting notes, organized by green bean type and batches, featuring JSON export/import and PDF generation.",
+  "requestFramePermissions": []
+}
