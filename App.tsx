@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
-import { AppState, User, GreenBean, RoastingData, SyncStatus, CloudConfig, Batch } from './types';
+import { AppState, User, GreenBean, RoastingData, SyncStatus, CloudConfig } from './types';
 import Landing from './components/Landing';
 import Dashboard from './components/Dashboard';
 import BeanDetail from './components/BeanDetail';
@@ -12,28 +12,30 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * SYSTEM DEFAULTS
  * These will be populated by your build tool (e.g. GitHub Actions) 
- * using environment variables. If blank, the user can still enter them manually.
+ * using environment variables.
  */
- 
- const getEnv = (key: string): string => {
+const getEnv = (key: string): string => {
   try {
-    // Vite replaces process.env.KEY with a string during build
-    // @ts-ignore
-    const value = process.env[key];
-    return value || '';
+    // Static checks for Vite define plugin compatibility
+    if (key === 'SUPABASE_URL') {
+      // @ts-ignore
+      return process.env.SUPABASE_URL || '';
+    }
+    if (key === 'SUPABASE_KEY') {
+      // @ts-ignore
+      return process.env.SUPABASE_KEY || '';
+    }
+    return '';
   } catch (e) {
     return '';
   }
 };
 
 const DEFAULT_CLOUD_CONFIG: CloudConfig = {
-  // @ts-ignore - process.env might not be defined in all dev environments
-  enabled: !!(process.env.SUPABASE_URL || ''),
+  enabled: !!getEnv('SUPABASE_URL'),
   provider: 'supabase',
-  // @ts-ignore
-  url: process.env.SUPABASE_URL || '', 
-  // @ts-ignore
-  apiKey: process.env.SUPABASE_KEY || ''
+  url: getEnv('SUPABASE_URL'), 
+  apiKey: getEnv('SUPABASE_KEY')
 };
 
 const STORAGE_KEY = 'roasters_journeys_v2_persistent_state';
@@ -75,7 +77,6 @@ const App: React.FC = () => {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Priority: Use saved user data, but update config if environment variables are now present
         return {
           ...parsed,
           cloudConfig: (DEFAULT_CLOUD_CONFIG.url && !parsed.cloudConfig?.url) 
