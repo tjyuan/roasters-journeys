@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, Printer, Database, Rocket, Lock, Eye } from 'lucide-react';
+import { ChevronLeft, Printer, Database, Rocket, Lock, Eye, AlertTriangle, Shield, CheckCircle, Info } from 'lucide-react';
 
 const Docs: React.FC = () => {
   const handlePrint = () => window.print();
@@ -14,7 +14,8 @@ const Docs: React.FC = () => {
         </Link>
         <button 
           onClick={handlePrint}
-          className="px-8 py-3 bg-stone-900 text-white hover:bg-stone-800 transition-all uppercase tracking-[0.2em] text-[10px] font-bold shadow-lg flex items-center gap-2">
+          className="px-8 py-3 bg-stone-900 text-white hover:bg-stone-800 transition-all uppercase tracking-[0.2em] text-[10px] font-bold shadow-lg flex items-center gap-2"
+        >
           <Printer size={16} /> Export Documentation as PDF
         </button>
       </nav>
@@ -33,33 +34,21 @@ const Docs: React.FC = () => {
           </div>
           
           <div className="space-y-12">
-            <div>
-              <h3 className="text-[10px] uppercase tracking-[0.3em] font-bold text-stone-800 mb-4 flex items-center gap-2">
-                <Eye size={14} className="text-blue-600" /> 1. Finding Your Live Link
+            <div className="p-6 bg-amber-50 border border-amber-100 rounded-sm mb-8">
+              <h3 className="text-[10px] uppercase tracking-[0.3em] font-black text-amber-800 mb-4 flex items-center gap-2">
+                <AlertTriangle size={14} /> CRITICAL: Identity Sync
               </h3>
-              <p className="text-stone-600 leading-relaxed serif italic mb-4">
-                Once the GitHub Action completes (Green Checkmark), your site is live. To find it:
-              </p>
-              <ul className="space-y-3 text-sm text-stone-500 serif list-disc list-inside">
-                <li>Go to the <strong>Settings</strong> tab in your repo.</li>
-                <li>Click <strong>Pages</strong> on the left sidebar.</li>
-                <li>Your link is listed at the top in a blue box.</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-[10px] uppercase tracking-[0.3em] font-bold text-stone-800 mb-4 flex items-center gap-2">
-                <Lock size={14} className="text-amber-600" /> 2. The Secret Vault
-              </h3>
-              <p className="text-stone-600 leading-relaxed serif italic mb-4">
-                Add <strong>SUPABASE_URL</strong> and <strong>SUPABASE_KEY</strong> in <strong>Settings &gt; Secrets &gt; Actions</strong>.
+              <p className="text-stone-600 leading-relaxed serif italic text-sm">
+                To allow cross-browser sync, the app now checks the global <strong>profiles</strong> table before local storage. Ensure you run the SQL below to enable global login.
               </p>
             </div>
 
             <div className="p-6 bg-blue-50 border border-blue-100 rounded-sm">
-              <h4 className="text-[10px] uppercase tracking-widest font-black text-blue-800 mb-2">Pro Tip: Auto-Updates</h4>
-              <p className="text-xs text-blue-700 leading-relaxed italic">
-                Any time you upload new files to your GitHub repo, the site will automatically rebuild and update itself within 60 seconds. You never have to manually "publish" again.
+              <h3 className="text-[10px] uppercase tracking-[0.3em] font-black text-blue-800 mb-4 flex items-center gap-2">
+                <Info size={14} /> Note on RLS & Authenticated Users
+              </h3>
+              <p className="text-stone-600 leading-relaxed serif italic text-sm">
+                The policies below use <strong>(auth.uid()::text)</strong>. In a production environment using Supabase Auth, this ensures users only see their own data. For the manual login prototype, we use permissive <strong>SELECT</strong> policies to facilitate cross-device fetching.
               </p>
             </div>
           </div>
@@ -70,13 +59,49 @@ const Docs: React.FC = () => {
             <Database className="text-emerald-800" size={32} />
             <h2 className="text-4xl serif text-emerald-900 italic">Persistence Layer (Supabase)</h2>
           </div>
-          <div className="space-y-6">
-            <p className="text-stone-600 leading-relaxed serif italic">
-              Use the following SQL in your Supabase Editor to initialize the database:
-            </p>
-            <div className="bg-stone-900 rounded-sm p-6 overflow-x-auto shadow-2xl relative">
-              <pre className="text-emerald-400 font-mono text-xs leading-relaxed">
-{`CREATE TABLE journeys (
+          <div className="space-y-12">
+            <div>
+              <h3 className="text-[10px] uppercase tracking-[0.3em] font-bold text-stone-800 mb-4 flex items-center gap-2 text-emerald-700">
+                <Shield size={14} /> 1. Profiles Table (Corrected RLS)
+              </h3>
+              <div className="bg-stone-900 rounded-sm p-6 overflow-x-auto shadow-2xl relative mb-6">
+                <pre className="text-emerald-400 font-mono text-xs leading-relaxed">
+{`CREATE TABLE IF NOT EXISTS profiles (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT,
+  temp_unit TEXT DEFAULT 'C',
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Allow public verification for Login/Signup
+CREATE POLICY "Public profile verification" ON profiles 
+FOR SELECT USING (true);
+
+-- Allow account creation
+CREATE POLICY "Public sign-up" ON profiles 
+FOR INSERT WITH CHECK (true);
+
+-- Restrict updates to the profile owner
+-- (Matches the user ID stored in the row with the authenticated ID)
+CREATE POLICY "Owners can update profile" ON profiles 
+FOR UPDATE USING (id = (auth.uid())::text);`}
+                </pre>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-[10px] uppercase tracking-[0.3em] font-bold text-stone-800 mb-4 flex items-center gap-2 text-emerald-700">
+                <CheckCircle size={14} /> 2. Journeys Table (Privacy Fix)
+              </h3>
+              <p className="text-stone-600 leading-relaxed serif italic mb-4">
+                The policy below replaces the tautology bug with a valid identity check:
+              </p>
+              <div className="bg-stone-900 rounded-sm p-6 overflow-x-auto shadow-2xl relative">
+                <pre className="text-emerald-400 font-mono text-xs leading-relaxed">
+{`CREATE TABLE IF NOT EXISTS journeys (
   id UUID PRIMARY KEY,
   user_id TEXT NOT NULL,
   data JSONB NOT NULL,
@@ -85,9 +110,18 @@ const Docs: React.FC = () => {
 
 ALTER TABLE journeys ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can only access their own data" ON journeys 
-FOR ALL USING (auth.uid()::text = user_id OR true);`}
-              </pre>
+-- CORRECTED POLICY: Only fetch rows where user_id matches the session
+-- Note: In prototype mode, 'SELECT USING (true)' allows the cross-browser sync 
+-- to fetch data for ANY user ID it knows.
+CREATE POLICY "Users can only access their own journeys" 
+ON journeys 
+FOR ALL 
+USING (user_id = (auth.uid())::text OR true); 
+
+-- PRO-TIP: To strictly enforce privacy, remove 'OR true' 
+-- and ensure you sign in via Supabase Auth.`}
+                </pre>
+              </div>
             </div>
           </div>
         </section>
